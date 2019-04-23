@@ -54,7 +54,8 @@ DMA_HandleTypeDef hdma_sai1_b;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+RTC_DateTypeDef RTC_Calendar;
+RTC_TimeTypeDef RTC_Time;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -67,12 +68,28 @@ static void MX_SAI1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
-
+int _write_uart(int file, char *ptr, int len);
+int _sairead();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+//*******************************************************************************
+//funkcja                                 		_write_uart()
+int _write_uart(int file, char *ptr, int len){
+	HAL_UART_Transmit(&huart2,ptr,len,50);
+	return len;
+}
 
+
+//*******************************************************************************
+//funkcja                                 		_sairead()  100% niesprawna
+int _sairead(){
+	int val=1; //wartoœc
+	//HAL_SAI_Receive(hsai_BlockB1,)
+
+	return val;
+}
 /* USER CODE END 0 */
 
 /**
@@ -82,7 +99,10 @@ static void MX_RTC_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	uint8_t data[50];
+	uint16_t size=0;
+	int temp1=0,temp2=151900;
+	int rtcval[10];
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -111,6 +131,21 @@ int main(void)
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
+  RTC_Calendar.Year=19;
+  RTC_Calendar.Month=04;
+  RTC_Calendar.Date=23;
+
+  HAL_RTC_SetDate(&hrtc,&RTC_Calendar,RTC_FORMAT_BIN);
+
+  HAL_RTC_GetTime(&hrtc,&RTC_Time,RTC_FORMAT_BIN);
+
+  RTC_Time.Hours=23;
+  RTC_Time.Minutes=59;
+  RTC_Time.Seconds=50;
+
+  HAL_RTC_SetTime(&hrtc,&RTC_Time,RTC_FORMAT_BIN);
+
+  HAL_Delay(2000);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -120,6 +155,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  HAL_Delay(1000);
+	  HAL_GPIO_TogglePin(LD_G_GPIO_Port, LD_G_Pin);
+	  HAL_Delay(1);
+	  HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
+	  HAL_Delay(2);
+	  //temp1=_sairead();
+	  HAL_RTC_GetTime(&hrtc,&RTC_Time,RTC_FORMAT_BIN);//pobranie do RTC_Time czasu
+	  HAL_RTC_GetDate(&hrtc,&RTC_Calendar,RTC_FORMAT_BIN);//pobranie do RTC_Calendar daty
+	  //rtcval[0]=;
+	  size=sprintf(data,"Czas rtc: %dh\t%dm\t%ds \t  Data rtc:%d.%d.20%d\n",RTC_Time.Hours,RTC_Time.Minutes,RTC_Time.Seconds,RTC_Calendar.Date,RTC_Calendar.Month,RTC_Calendar.Year);
+	  _write_uart(&huart2, data, size);
+	  size=sprintf(data,"surowy rtc:%d \t \t \t przetworzony %d\n",temp1,temp2);
+	  _write_uart(&huart2, data, size);
   }
   /* USER CODE END 3 */
 }
