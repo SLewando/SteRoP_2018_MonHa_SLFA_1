@@ -93,8 +93,9 @@ int main(void)
   /* USER CODE BEGIN 1 */
 	uint8_t data[50];
 	uint16_t size = 0;
-	int temp1 = 0, temp2 = 151900;
+	int64_t temp1 = 0, temp2 = 0, max;
 	int rtcval[10];
+	int temp=10;
 
 	int32_t RecBuff[2048];
 	int16_t PlayBuff[4096];
@@ -152,7 +153,7 @@ int main(void)
 	 {
 	 Error_Handler();
 	 }*/
-	HAL_GPIO_TogglePin(LD_G_GPIO_Port, LD_G_Pin);
+	HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
 	HAL_Delay(2000);
 	HAL_GPIO_TogglePin(LD_G_GPIO_Port, LD_G_Pin);
 	HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
@@ -165,17 +166,43 @@ int main(void)
 	while (1) {
     /* USER CODE END WHILE */
 
+		if (temp=!0)temp--;
     /* USER CODE BEGIN 3 */
 		HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN); //pobranie do RTC_Time czasu
 		HAL_RTC_GetDate(&hrtc, &RTC_Calendar, RTC_FORMAT_BIN); //pobranie do RTC_Calendar daty
 //	  printf("Czas rtc: %dh\t%dm\t%ds \t  Data rtc:%d.%d.20%d\r\n",RTC_Time.Hours,RTC_Time.Minutes,RTC_Time.Seconds,RTC_Calendar.Date,RTC_Calendar.Month,RTC_Calendar.Year);
 
 		HAL_GPIO_TogglePin(LD_G_GPIO_Port, LD_G_Pin);
+		max=0;
+
+		for (int var = 0; var < 2048; ++var) {
+			if (RecBuff[var]>max)
+			{
+				max=RecBuff[var];
+			}
+
+		}
+
+		//for(temp1=0;temp1<2048;temp1++) {printf("%d\n ", RecBuff[temp1]);}
+		//for(temp1=0;temp1<2048;temp1++){
+//			HAL_Delay(1);
+		//temp2+=RecBuff[temp1];}
+		//temp2/=2048;
+
+		if (temp==0) if (max>3000000)
+		{
+			temp=max;
 		HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
+		HAL_Delay(1000);
+		printf("detected %d\n", temp);
+		}
+
+/*
 		temp1 = RecBuff[0];
 		printf("%d \t Czas rtc: %dh\t%dm\t%ds \t  Data rtc:%d.%d.20%d\n", temp1,
 				RTC_Time.Hours, RTC_Time.Minutes, RTC_Time.Seconds,
 				RTC_Calendar.Date, RTC_Calendar.Month, RTC_Calendar.Year);
+				*/
 
 		HAL_Delay(100);
 	}
