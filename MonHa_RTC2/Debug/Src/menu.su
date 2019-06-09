@@ -1,0 +1,6 @@
+menu.c:29:6:Menu_Odswiez	8	static
+menu.c:38:6:Menu_Nast	0	static
+menu.c:45:6:Menu_Poprz	0	static
+menu.c:52:6:Menu_Dziecko	0	static
+menu.c:59:6:Menu_Rodzic	0	static
+menu.c:66:6:Menu_Funkcja	8	static
