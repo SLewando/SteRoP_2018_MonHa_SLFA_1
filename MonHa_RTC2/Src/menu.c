@@ -31,7 +31,7 @@ void Menu_Odswiez(void){
 	if(ileZnakow < 7){  // LCD ma 6 znakow
 		BSP_LCD_GLASS_DisplayString(AktualnaPozycja->Nazwa_Pozycji);
 	} else {
-		BSP_LCD_GLASS_ScrollSentence(AktualnaPozycja->Nazwa_Pozycji, 1, 500);
+		BSP_LCD_GLASS_ScrollSentence(AktualnaPozycja->Nazwa_Pozycji, 1, 200);
 	}
 }
 
