@@ -1,9 +1,9 @@
-main.c:248:6:HAL_GPIO_EXTI_Callback	0	static
-main.c:267:5:_write	8	static
-main.c:428:6:Wyswietl_Prog_callback	48	static
-main.c:435:6:Wyswietl_Okres_callback	48	static
-main.c:450:6:Error_Handler	0	static
-main.c:192:6:SystemClock_Config	232	static
+main.c:249:6:HAL_GPIO_EXTI_Callback	0	static
+main.c:268:5:_write	8	static
+main.c:455:6:Wyswietl_Prog_callback	48	static
+main.c:462:6:Wyswietl_Okres_callback	48	static
+main.c:477:6:Error_Handler	0	static
+main.c:193:6:SystemClock_Config	232	static
 main.c:91:5:main	8	static
-main.c:274:6:Prog_callback	16968	static
-main.c:365:6:Okres_callback	48	static
+main.c:275:6:Prog_callback	16976	static
+main.c:366:6:Okres_callback	16960	static
