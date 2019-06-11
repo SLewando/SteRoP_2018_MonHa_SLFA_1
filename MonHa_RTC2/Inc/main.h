@@ -54,14 +54,17 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+/*-----------------  FUNKCJE CALLBACK MENU ---------------------------*/
 void Prog_callback(void);
-void Probki_callback(void);
+void Okres_callback(void);
 void Wyswietl_Prog_callback(void);
-void Wyswietl_Czestotliwosc_callback(void);
+void Wyswietl_Okres_callback(void);
 
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define PRESC 9999
+#define PERIOD 1999
 #define VLCD_Pin GPIO_PIN_3
 #define VLCD_GPIO_Port GPIOC
 #define JCenter_EXTI0_Pin GPIO_PIN_0

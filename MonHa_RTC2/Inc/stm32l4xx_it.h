@@ -64,6 +64,7 @@ void DMA1_Channel4_IRQHandler(void);
 void DMA1_Channel6_IRQHandler(void);
 void DMA1_Channel7_IRQHandler(void);
 void EXTI9_5_IRQHandler(void);
+void TIM6_DAC_IRQHandler(void);
 void DFSDM1_FLT0_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 

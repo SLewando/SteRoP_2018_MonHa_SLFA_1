@@ -25,6 +25,7 @@
 #include "lcd.h"
 #include "quadspi.h"
 #include "rtc.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -65,164 +66,17 @@ volatile int JLeft_flag = 0;
 volatile int JDown_flag = 0;
 
 int32_t ProgDzwieku = 300000;
-int CzestotliwoscProbkowania = 10; // Hz
+int OkresProbkowania = 10; // s
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-
 /* USER CODE BEGIN PFP */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	if(GPIO_Pin == JCenter_EXTI0_Pin){
-		JCenter_flag = 1;
-	}
-	if(GPIO_Pin == JLeft_EXTI1_Pin){
-		JLeft_flag = 1;
-	}
-	if(GPIO_Pin == JRight_EXTI2_Pin){
-		JRight_flag = 1;
-	}
-	if(GPIO_Pin == JUp_EXTI2_Pin){
-		JUp_flag = 1;
-	}
-	if(GPIO_Pin == JDown_EXTI5_Pin){
-		JDown_flag = 1;
-	}
-}
-
-int _write(int file, char *ptr, int len){
-	HAL_UART_Transmit(&huart2, ptr, len, 50);
-	return len;
-}
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+int _write(int file, char *ptr, int len);
 
 /*-----------------  FUNKCJE CALLBACK MENU ---------------------------*/
-
-void Prog_callback(void){
-	// ZMIENNE MIKROFONU
-	double const filtr[64]={0.00234434917719461,0.00253607247271912,0.00285229122268397,0.00329035375942028,0.00384640000611839,0.00451539722262479,0.00529118751439567,0.00616654664968141,0.00713325361488786,0.00818217022853550,0.00930333003144620,0.0104860355757936,0.0117189631494397,0.0129902738954427,0.0142877302205574,0.0155988163316447,0.0169108616957447,0.0182111661885955,0.0194871256779324,0.0207263567821822,0.0219168195522430,0.0230469368438535,0.0241057091804112,0.0250828239506856,0.0259687578422278,0.0267548714788497,0.0274334953086374,0.0279980058767921,0.0284428917142534,0.0287638081775825,0.0289576206868904,0.0290224359255544,0.0289576206868904,0.0287638081775825,0.0284428917142534,0.0279980058767921,0.0274334953086374,0.0267548714788497,0.0259687578422278,0.0250828239506856,0.0241057091804112,0.0230469368438535,0.0219168195522430,0.0207263567821822,0.0194871256779324,0.0182111661885955,0.0169108616957447,0.0155988163316447,0.0142877302205574,0.0129902738954427,0.0117189631494397,0.0104860355757936,0.00930333003144620,0.00818217022853550,0.00713325361488786,0.00616654664968141,0.00529118751439567,0.00451539722262479,0.00384640000611839,0.00329035375942028,0.00285229122268397,0.00253607247271912,0.00234434917719461,0.00227854094737764};
-	int64_t	max;
-	double filtrowany[2048];
-
-	// ZMIENNE FLASH
-	// ZAPIS
-	uint8_t DaneDoZapisu[N_DANYCH] = {};		// Dane w formacie szesciu liczb uint
-	const uint8_t *PtrDaneZapis = &DaneDoZapisu;		// Wskaznik na pierwszy elem. tablicy
-	uint32_t AdresKomorki = 0x00; 				// Adres gdzie zacznie sie zapis
-	uint32_t RozmiarPaczkiDanych = N_DANYCH * sizeof(uint8_t);
-	// ODCZYT
-	uint8_t Odczytano[N_DANYCH];		// Tablica do ktorej zapisze sie odczytane dane
-	const uint8_t *PtrOdczytano = &Odczytano;	// Wskaznik na pierwszy elem. tablicy odczytu
-	// Block ma 4 kB -> przyjmuje 499 logow(data zajmie 1 B)
-	if(BSP_QSPI_Erase_Block(AdresKomorki) != QSPI_OK){	// Wyczyszczenie bloku, z pierwszym bajtem
-		Error_Handler();
-	}
-
-//	for(int i=0; i<N_DANYCH; i++){
-//		if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarPaczkiDanych) != QSPI_OK){
-//		  printf("Blad zapisu!\r\n");
-//		}
-//		if (BSP_QSPI_Read(PtrOdczytano, AdresKomorki, RozmiarPaczkiDanych) == QSPI_OK){
-//			printf("Odczytano char %c \r\n", (char) *PtrOdczytano);
-//		} else {
-//			printf("Blad odczytu!\r\n");
-//		}
-//		AdresKomorki += RozmiarPaczkiDanych;		// Iteracja do kolejnych komorek
-//		++PtrDaneZapis;
-//		++PtrOdczytano;
-//	}
-
-
-	HAL_RTC_GetDate(&hrtc, &RTC_Calendar, RTC_FORMAT_BIN); //pobranie do RTC_Calendar daty
-	printf("Data Data rtc:%d.%d.20%d\r\n", RTC_Calendar.Date, RTC_Calendar.Month, RTC_Calendar.Year);
-	DaneDoZapisu[0] = RTC_Calendar.Date;
-	DaneDoZapisu[1] = RTC_Calendar.Month;
-	DaneDoZapisu[2] = RTC_Calendar.Year;
-
-	if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarPaczkiDanych) != QSPI_OK){
-		printf("Blad zapisu!\r\n");
-	}
-	AdresKomorki += RozmiarPaczkiDanych;
-
-	while(!JUp_flag){
-		BSP_LCD_GLASS_DisplayString("LOGUJE");
-		//filtr Fir srodkowo przepustowy (300-300 000)hz
-		for (int i3 = 0; i3 < 2048; i3++){
-			filtrowany[i3] = 0;//zerowanie po poprzedniej filtracji
-			 for (int i4 = 0; i4 < 64; i4++){
-				if (i3>=i4){
-					filtrowany[i3]=filtrowany[i3]+(  ( (double)RecBuff[i3-i4] )  *filtr[i4]);
-				}
-			}
-		}
-		//szukanie maximum
-		max = 0;
-		for (int var = 0; var < 1600; ++var) {
-			if (filtrowany[var]>max){
-				max = filtrowany[var];
-			}
-		}
-		//trigger
-		if (max >= ProgDzwieku){
-			HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
-			HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN); //zaktualizowanie czasu RTC_Time
-			printf(" Czas rtc: %dh\t%dm\t%ds \r\n", RTC_Time.Hours, RTC_Time.Minutes, RTC_Time.Seconds);
-			DaneDoZapisu[0] = RTC_Time.Hours;
-			DaneDoZapisu[1] = RTC_Time.Minutes;
-			DaneDoZapisu[2] = RTC_Time.Seconds;
-			if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarPaczkiDanych) != QSPI_OK){
-				printf("Blad zapisu!\r\n");
-			}
-			AdresKomorki += RozmiarPaczkiDanych;
-		}
-	} // Koniec logowania przekraczania progu
-	BSP_LCD_GLASS_DisplayString("KONIEC");
-	HAL_Delay(500);
-	HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
-
-	// Odczytywanie logow
-	if (BSP_QSPI_Read(PtrOdczytano, 0x00, RozmiarPaczkiDanych) == QSPI_OK){
-		printf("Data: %d.%d.%d \r\n", Odczytano[0], Odczytano[1], Odczytano[2]);
-	} else {
-		printf("Blad odczytu!\r\n");
-	}
-	uint8_t buffor[6];
-	for(uint32_t i = 0x03; i < AdresKomorki; i+= RozmiarPaczkiDanych){
-		sprintf(buffor, "LOG %d", i/3);
-		BSP_LCD_GLASS_DisplayString(buffor);
-		HAL_Delay(500);
-		if (BSP_QSPI_Read(PtrOdczytano, i, RozmiarPaczkiDanych) == QSPI_OK){
-			printf("Log %d: %dh\t%dm\t%ds \r\n", i/3, Odczytano[0], Odczytano[1], Odczytano[2]);
-			sprintf(buffor, "%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
-			BSP_LCD_GLASS_DisplayString(buffor);
-			HAL_Delay(1000);
-		} else {
-			printf("Blad odczytu!\r\n");
-			BSP_LCD_GLASS_DisplayString("BLAD");
-		}
-	}
-
-}
-
-void Probki_callback(void){
-	printf("Rozpoczynam zbieranie probek\r\n");
-	while(!JUp_flag){
-		HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
-		HAL_Delay(50);
-	}
-	printf("Koncze zbieranie probek\r\n");
-	HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
-}
-
-void Wyswietl_Prog_callback(void){
-	uint8_t* WartoscProgu[10]={};
-	sprintf(WartoscProgu, "%d", ProgDzwieku);
-	BSP_LCD_GLASS_DisplayString(WartoscProgu);
-	HAL_Delay(1000);
-}
-
-void Wyswietl_Czestotliwosc_callback(void);
-/*-----------------  FUNKCJE CALLBACK MENU ---------------------------*/
+// Prototypy spisane w main.h
 
 /* USER CODE END PFP */
 
@@ -265,6 +119,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_RTC_Init();
   MX_DFSDM1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
 	RTC_Calendar.Year = 19;
@@ -390,6 +245,202 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == JCenter_EXTI0_Pin){
+		JCenter_flag = 1;
+	}
+	if(GPIO_Pin == JLeft_EXTI1_Pin){
+		JLeft_flag = 1;
+	}
+	if(GPIO_Pin == JRight_EXTI2_Pin){
+		JRight_flag = 1;
+	}
+	if(GPIO_Pin == JUp_EXTI2_Pin){
+		JUp_flag = 1;
+	}
+	if(GPIO_Pin == JDown_EXTI5_Pin){
+		JDown_flag = 1;
+	}
+}
+
+int _write(int file, char *ptr, int len){
+	HAL_UART_Transmit(&huart2, ptr, len, 50);
+	return len;
+}
+
+/*-----------------  FUNKCJE CALLBACK MENU ---------------------------*/
+
+void Prog_callback(void){
+	// ZMIENNE MIKROFONU
+	double const filtr[64]={0.00234434917719461,0.00253607247271912,0.00285229122268397,0.00329035375942028,0.00384640000611839,0.00451539722262479,0.00529118751439567,0.00616654664968141,0.00713325361488786,0.00818217022853550,0.00930333003144620,0.0104860355757936,0.0117189631494397,0.0129902738954427,0.0142877302205574,0.0155988163316447,0.0169108616957447,0.0182111661885955,0.0194871256779324,0.0207263567821822,0.0219168195522430,0.0230469368438535,0.0241057091804112,0.0250828239506856,0.0259687578422278,0.0267548714788497,0.0274334953086374,0.0279980058767921,0.0284428917142534,0.0287638081775825,0.0289576206868904,0.0290224359255544,0.0289576206868904,0.0287638081775825,0.0284428917142534,0.0279980058767921,0.0274334953086374,0.0267548714788497,0.0259687578422278,0.0250828239506856,0.0241057091804112,0.0230469368438535,0.0219168195522430,0.0207263567821822,0.0194871256779324,0.0182111661885955,0.0169108616957447,0.0155988163316447,0.0142877302205574,0.0129902738954427,0.0117189631494397,0.0104860355757936,0.00930333003144620,0.00818217022853550,0.00713325361488786,0.00616654664968141,0.00529118751439567,0.00451539722262479,0.00384640000611839,0.00329035375942028,0.00285229122268397,0.00253607247271912,0.00234434917719461,0.00227854094737764};
+	int64_t	max;
+	double filtrowany[2048];
+
+	// ZMIENNE FLASH
+	// ZAPIS
+	uint8_t DaneDoZapisu[N_DANYCH] = {};		// Dane w formacie szesciu liczb uint
+	const uint8_t *PtrDaneZapis = &DaneDoZapisu;		// Wskaznik na pierwszy elem. tablicy
+	uint32_t AdresKomorki = 0x00; 				// Adres gdzie zacznie sie zapis
+	uint32_t RozmiarPaczkiDanych = N_DANYCH * sizeof(uint8_t);
+	// ODCZYT
+	uint8_t Odczytano[N_DANYCH];		// Tablica do ktorej zapisze sie odczytane dane
+	const uint8_t *PtrOdczytano = &Odczytano;	// Wskaznik na pierwszy elem. tablicy odczytu
+	// Block ma 4 kB -> przyjmuje 499 logow(data zajmie 1 B)
+	if(BSP_QSPI_Erase_Block(AdresKomorki) != QSPI_OK){	// Wyczyszczenie bloku, z pierwszym bajtem
+		Error_Handler();
+	}
+
+	HAL_RTC_GetDate(&hrtc, &RTC_Calendar, RTC_FORMAT_BIN); //pobranie do RTC_Calendar daty
+	printf("Data Data rtc:%d.%d.20%d\r\n", RTC_Calendar.Date, RTC_Calendar.Month, RTC_Calendar.Year);
+	DaneDoZapisu[0] = RTC_Calendar.Date;
+	DaneDoZapisu[1] = RTC_Calendar.Month;
+	DaneDoZapisu[2] = RTC_Calendar.Year;
+
+	if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarPaczkiDanych) != QSPI_OK){
+		printf("Blad zapisu!\r\n");
+	}
+	AdresKomorki += RozmiarPaczkiDanych;
+
+	while(!JUp_flag){
+		BSP_LCD_GLASS_DisplayString("LOGUJE");
+		//filtr Fir srodkowo przepustowy (300-300 000)hz
+		for (int i3 = 0; i3 < 2048; i3++){
+			filtrowany[i3] = 0;//zerowanie po poprzedniej filtracji
+			 for (int i4 = 0; i4 < 64; i4++){
+				if (i3>=i4){
+					filtrowany[i3]=filtrowany[i3]+(  ( (double)RecBuff[i3-i4] )  *filtr[i4]);
+				}
+			}
+		}
+		//szukanie maximum
+		max = 0;
+		for (int var = 0; var < 1600; ++var) {
+			if (filtrowany[var]>max){
+				max = filtrowany[var];
+			}
+		}
+		//trigger
+		if (max >= ProgDzwieku){
+			HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
+			HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN); //zaktualizowanie czasu RTC_Time
+			printf(" Czas rtc: %dh\t%dm\t%ds \r\n", RTC_Time.Hours, RTC_Time.Minutes, RTC_Time.Seconds);
+			DaneDoZapisu[0] = RTC_Time.Hours;
+			DaneDoZapisu[1] = RTC_Time.Minutes;
+			DaneDoZapisu[2] = RTC_Time.Seconds;
+			if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarPaczkiDanych) != QSPI_OK){
+				printf("Blad zapisu!\r\n");
+			}
+			AdresKomorki += RozmiarPaczkiDanych;
+		}
+	} // Koniec logowania przekraczania progu
+	BSP_LCD_GLASS_DisplayString("KONIEC");
+	HAL_Delay(500);
+	HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
+
+	// Odczytywanie logow
+	if (BSP_QSPI_Read(PtrOdczytano, 0x00, RozmiarPaczkiDanych) == QSPI_OK){
+		printf("Data: %d.%d.%d \r\n", Odczytano[0], Odczytano[1], Odczytano[2]);
+	} else {
+		printf("Blad odczytu!\r\n");
+	}
+	uint8_t buffor[6];
+	for(uint32_t i = 0x03; i < AdresKomorki; i+= RozmiarPaczkiDanych){
+		sprintf(buffor, "LOG %d", i/3);
+		BSP_LCD_GLASS_DisplayString(buffor);
+		HAL_Delay(500);
+		if (BSP_QSPI_Read(PtrOdczytano, i, RozmiarPaczkiDanych) == QSPI_OK){
+			printf("Log %d: %dh\t%dm\t%ds \r\n", i/3, Odczytano[0], Odczytano[1], Odczytano[2]);
+			sprintf(buffor, "%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
+			BSP_LCD_GLASS_DisplayString(buffor);
+			HAL_Delay(1000);
+		} else {
+			printf("Blad odczytu!\r\n");
+			BSP_LCD_GLASS_DisplayString("BLAD");
+		}
+	}
+	// DEINIT
+}
+
+void Okres_callback(void){
+	printf("Rozpoczynam okresowe zbieranie probek\r\n");
+
+	// ZMIENNE MIKROFONU
+	uint32_t srednia = 0;
+
+	// ZMIENNE FLASH
+	// ZAPIS
+	uint32_t DaneDoZapisu;
+	const uint32_t *PtrDaneZapis = &DaneDoZapisu;		// Wskaznik na pierwszy elem. tablicy
+	uint32_t AdresKomorki = 0x1000; 				// Adres gdzie zacznie sie zapis; zacznij od bloku wyzej niz Tryb Progu
+	uint32_t RozmiarWartosciSredniej = sizeof(uint32_t);
+	// ODCZYT
+	uint32_t Odczytano;		// Tablica do ktorej zapisze sie odczytane dane
+	const uint32_t *PtrOdczytano = &Odczytano;	// Wskaznik na pierwszy elem. tablicy odczytu
+	// Block ma 4 kB
+	if(BSP_QSPI_Erase_Block(AdresKomorki) != QSPI_OK){	// Wyczyszczenie bloku, z pierwszym bajtem
+		Error_Handler();
+	}
+
+	while(!JUp_flag){
+		BSP_LCD_GLASS_DisplayString("LOGUJE");
+		// timer i zbieranie pomiarow
+		// audio mambo jumbo
+		HAL_Delay(1000);
+		srednia += 100000;
+
+		DaneDoZapisu = srednia;
+		printf(" Srednia wynosi: %d \r\n", DaneDoZapisu);
+
+		if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarWartosciSredniej) != QSPI_OK){
+			printf("Blad zapisu!\r\n");
+		}
+		AdresKomorki += RozmiarWartosciSredniej;
+		HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
+	} // Koniec logowania sredniej z okresu
+
+	BSP_LCD_GLASS_DisplayString("KONIEC");
+	HAL_Delay(500);
+	HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
+
+	// Odczytywanie logow
+	uint8_t buffor[6];
+	int k = 0; // zmienna pomocnicza, do wyswietlania numeru logu
+	for(uint32_t i = 0x1000; i < AdresKomorki; i+= RozmiarWartosciSredniej){
+		k++;
+		sprintf(buffor, "LOG %d", k);
+		BSP_LCD_GLASS_DisplayString(buffor);
+		HAL_Delay(500);
+		if (BSP_QSPI_Read(PtrOdczytano, i, RozmiarWartosciSredniej) == QSPI_OK){
+			printf(" Srednia wynosi: %d \r\n", *PtrOdczytano);
+			sprintf(buffor, "%d", Odczytano);
+			BSP_LCD_GLASS_DisplayString(buffor);
+			HAL_Delay(1000);
+		} else {
+			printf("Blad odczytu!\r\n");
+			BSP_LCD_GLASS_DisplayString("BLAD");
+		}
+	}
+	// DEINIT
+	printf("Koncze zbieranie probek\r\n");
+}
+
+void Wyswietl_Prog_callback(void){
+	uint8_t* WartoscProgu[10]={};
+	sprintf(WartoscProgu, "%d", ProgDzwieku);
+	BSP_LCD_GLASS_DisplayString(WartoscProgu);
+	HAL_Delay(1000);
+}
+
+void Wyswietl_Okres_callback(void){
+	uint8_t* WartoscOkresu[10]={};
+	sprintf(WartoscOkresu, "%d", OkresProbkowania);
+	BSP_LCD_GLASS_DisplayString(WartoscOkresu);
+	HAL_Delay(1000);
+}
+/*-----------------  FUNKCJE CALLBACK MENU ---------------------------*/
+
 
 /* USER CODE END 4 */
 

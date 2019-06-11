@@ -20,9 +20,8 @@
 Pozycja_Menu Start = {"LOGGER", &Tryb1, &Tryb2, NULL, NULL, NULL};
 Pozycja_Menu Tryb1 = {"PROG", &Tryb2, &Start, NULL, &Wyswietl_Info_Tryb1, Prog_callback};
 Pozycja_Menu Wyswietl_Info_Tryb1 = {"Wyswietl Prog ", NULL, NULL, &Tryb1, NULL, Wyswietl_Prog_callback};
-//	Menu Wyswietl_Info_T1 = {"Wyswietl Prog"};
-Pozycja_Menu Tryb2 = {"PROBKI", &Start, &Tryb1, NULL, NULL, Probki_callback};
-//	Menu Wyswietl_Info_T1;
+Pozycja_Menu Tryb2 = {"PROBKI", &Start, &Tryb1, NULL, &Wyswietl_Info_Tryb2, Okres_callback};
+Pozycja_Menu Wyswietl_Info_Tryb2 = {"Wyswietl Okres ", NULL, NULL, &Tryb2, NULL, Wyswietl_Okres_callback};
 
 Pozycja_Menu *AktualnaPozycja = &Start;
 
