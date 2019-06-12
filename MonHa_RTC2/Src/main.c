@@ -69,8 +69,8 @@ volatile int JLeft_flag = 0;
 volatile int JDown_flag = 0;
 
 int32_t ProgDzwieku = 600000;
-int OkresProbkowania = 10; // s
-int okres_probki=1;
+int OkresProbkowania = 3; // s max 3600*okres_probki
+int okres_probki=1;// co ile sekund wykona podstawowy pomiar
 int32_t curtime=0,timval=0;
 double statystyka[3600];
 _Bool flagaprobek=0;
@@ -302,7 +302,7 @@ void Prog_callback(void){
 	}
 
 	HAL_RTC_GetDate(&hrtc, &RTC_Calendar, RTC_FORMAT_BIN); //pobranie do RTC_Calendar daty
-	printf("Data Data rtc:%d.%d.20%d\r\n", RTC_Calendar.Date, RTC_Calendar.Month, RTC_Calendar.Year);
+	printf("Data rtc:%d.%d.20%d\r\n", RTC_Calendar.Date, RTC_Calendar.Month, RTC_Calendar.Year);
 	DaneDoZapisu[0] = RTC_Calendar.Date;
 	DaneDoZapisu[1] = RTC_Calendar.Month;
 	DaneDoZapisu[2] = RTC_Calendar.Year;
@@ -351,51 +351,72 @@ void Prog_callback(void){
 	HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
 
 	// Odczytywanie logow
+
+	uint8_t buffor[6];
 	if (BSP_QSPI_Read(PtrOdczytano, 0x00, RozmiarPaczkiDanych) == QSPI_OK){
-		printf("Data: %d.%d.%d \r\n", Odczytano[0], Odczytano[1], Odczytano[2]);
+		printf("Data:: %d.%d.%d \r\n", Odczytano[0], Odczytano[1], Odczytano[2]);
+		sprintf(buffor, "DATA");
+		BSP_LCD_GLASS_DisplayString(buffor);
+		HAL_Delay(1000);
+		sprintf(buffor, "%d0%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
+		BSP_LCD_GLASS_DisplayString(buffor);
+		HAL_Delay(1000);
 	} else {
 		printf("Blad odczytu!\r\n");
 	}
-	uint8_t buffor[6];
 	for(uint32_t i = 0x03; i < AdresKomorki; i+= RozmiarPaczkiDanych){
 		sprintf(buffor, "LOG %d", i/3);
 		BSP_LCD_GLASS_DisplayString(buffor);
 		HAL_Delay(500);
 		if (BSP_QSPI_Read(PtrOdczytano, i, RozmiarPaczkiDanych) == QSPI_OK){
 			printf("Log %d: %dh\t%dm\t%ds \r\n", i/3, Odczytano[0], Odczytano[1], Odczytano[2]);
-//zapewnienie formatu hhmmss
-			if (Odczytano[0]<10){
-				if (Odczytano[1]<10){
 
+		//zapewnienie formatu hhmmss
+
+			if (Odczytano[0]<10){
+//jednoznakowe godziny
+				if (Odczytano[1]<10){
+	//jednoznakowe minuty
 					if (Odczytano[2]<10){
+		//jednoznakowe sekundy
 						sprintf(buffor, "0%d0%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}else{
+		//dwuznakowe sekundy
 						sprintf(buffor, "0%d0%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
 
 				}else{
-
+	//dwuznakowe minuty
 					if (Odczytano[2]<10){
+		//jednoznakowe sekundy
 						sprintf(buffor, "0%d%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}else{
+		//dwuznakowe sekundy
 						sprintf(buffor, "0%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
 
 				}
 			}else{
+//dwuznakowe godziny
 				if (Odczytano[1]<10){
+	//jednoznakowe minuty
 
 					if (Odczytano[2]<10){
+		//jednoznakowe sekundy
 						sprintf(buffor, "%d0%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}else{
+		//dwuznakowe  sekundy
 						sprintf(buffor, "%d0%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
 
 				}else{
+	//dwuznakowe minuty
 
 					if (Odczytano[2]<10){
+		//jednoznakowe sekundy
 						sprintf(buffor, "%d%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}else{
+		//dwuznakowe sekundy
 						sprintf(buffor, "%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
 				}
@@ -413,30 +434,10 @@ void Prog_callback(void){
 	}
 	// DEINIT
 }
-
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
-//***************************************************************************************************************************************************************************************
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 if (htim==&htim6 && flagaprobek==1){
 
-	timval=timval+1;
-	//printf(" timval : %d \r\n", timval);
+	//timval=timval+1;
 	HAL_GPIO_TogglePin(LD_G_GPIO_Port,LD_G_Pin);
 	}
 }
@@ -448,8 +449,6 @@ void Okres_callback(void){
 	uint32_t srednia = 0;
 	double AVERAGE = 0;
 	uint32_t licznik=0,licznik2=0,lasttime=0,temp;
-	//double const filtr[64]={0.00234434917719461,0.00253607247271912,0.00285229122268397,0.00329035375942028,0.00384640000611839,0.00451539722262479,0.00529118751439567,0.00616654664968141,0.00713325361488786,0.00818217022853550,0.00930333003144620,0.0104860355757936,0.0117189631494397,0.0129902738954427,0.0142877302205574,0.0155988163316447,0.0169108616957447,0.0182111661885955,0.0194871256779324,0.0207263567821822,0.0219168195522430,0.0230469368438535,0.0241057091804112,0.0250828239506856,0.0259687578422278,0.0267548714788497,0.0274334953086374,0.0279980058767921,0.0284428917142534,0.0287638081775825,0.0289576206868904,0.0290224359255544,0.0289576206868904,0.0287638081775825,0.0284428917142534,0.0279980058767921,0.0274334953086374,0.0267548714788497,0.0259687578422278,0.0250828239506856,0.0241057091804112,0.0230469368438535,0.0219168195522430,0.0207263567821822,0.0194871256779324,0.0182111661885955,0.0169108616957447,0.0155988163316447,0.0142877302205574,0.0129902738954427,0.0117189631494397,0.0104860355757936,0.00930333003144620,0.00818217022853550,0.00713325361488786,0.00616654664968141,0.00529118751439567,0.00451539722262479,0.00384640000611839,0.00329035375942028,0.00285229122268397,0.00253607247271912,0.00234434917719461,0.00227854094737764};
-	//double filtrowany[2048];
 	timval=0;
 	// ZMIENNE FLASH
 	// ZAPIS
@@ -467,12 +466,16 @@ void Okres_callback(void){
 
 	BSP_LCD_GLASS_DisplayString("LOGUJE");
 	while(!JUp_flag){
+		HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN); //zaktualizowanie czasu RTC_Time
 		HAL_Delay(100);
 
+			timval=(((RTC_Time.Hours)*60 + RTC_Time.Minutes *60)+ RTC_Time.Seconds);
 
-		if (OkresProbkowania<=timval) {
-			printf(" timval : %d \r\n", timval);
-			timval=0;
+
+		if (OkresProbkowania<=timval-curtime){
+		//if (OkresProbkowania<=timval) {
+			curtime=timval;
+			//timval=0;
 
 			AVERAGE=(double)0;
 			for (int var = 0; var < licznik; ++var) {
@@ -484,7 +487,7 @@ void Okres_callback(void){
 			srednia = (uint32_t) AVERAGE;
 			// audio mambo jumbo
 			DaneDoZapisu = srednia;
-			printf(" Srednia do zapisu : %d \r\n", DaneDoZapisu);
+			printf(" Zapisuje wartosc : %d \r\n", DaneDoZapisu);
 			if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarWartosciSredniej) != QSPI_OK){
 			printf("Blad zapisu!\r\n");
 			}
@@ -534,9 +537,9 @@ void Okres_callback(void){
 		if (BSP_QSPI_Read(PtrOdczytano, i, RozmiarWartosciSredniej) == QSPI_OK){
 			temp=(uint32_t)Odczytano;
 			licznik2=0;
-			while(temp>100000){temp/=10; licznik2++;}
+			while(temp>10000){temp/=10; licznik2++;}
 			printf(" Srednia wynosi: %d \r\n", *PtrOdczytano);
-			sprintf(buffor, "%d%d", Odczytano,temp2);
+			sprintf(buffor, "%dE%d", temp,licznik2);
 			BSP_LCD_GLASS_DisplayString(buffor);
 			HAL_Delay(1000);
 		} else {
