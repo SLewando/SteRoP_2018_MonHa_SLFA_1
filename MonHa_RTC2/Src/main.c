@@ -134,15 +134,12 @@ int main(void)
 	RTC_Calendar.Year = 19;
 	RTC_Calendar.Month = 06;
 	RTC_Calendar.Date = 12;
-
 	HAL_RTC_SetDate(&hrtc, &RTC_Calendar, RTC_FORMAT_BIN);
 
 	HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN);
-
-	RTC_Time.Hours = 0;
-	RTC_Time.Minutes = 0;
+	RTC_Time.Hours = 15;
+	RTC_Time.Minutes = 20;
 	RTC_Time.Seconds = 0;
-
 	HAL_RTC_SetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN);
 
 	/* Start DFSDM conversions */
@@ -177,11 +174,11 @@ int main(void)
 			 JDown_flag  = 0;
 		  }
 		  if(JUp_flag == 1){
-		  		 // Przerwanie uzywane do wyjscia z dzialajacej funkcji menu
-			  	 // lub przejscia do rodzica pozycji menu
-			  	 Menu_Rodzic();
-		  		 JUp_flag  = 0;
-		  	  }
+			 // Przerwanie uzywane do wyjscia z dzialajacej funkcji menu
+			 // lub przejscia do rodzica pozycji menu
+			 Menu_Rodzic();
+			 JUp_flag  = 0;
+		  }
 		  if(JCenter_flag == 1){
 			 Menu_Funkcja();
 			 JCenter_flag  = 0;
@@ -254,9 +251,8 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
+// Obsluga joysticka
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if(GPIO_Pin == JCenter_EXTI0_Pin){
 		JCenter_flag = 1;
 	}
@@ -274,6 +270,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
+// Wyswietlanie na UARTcie
 int _write(int file, char *ptr, int len){
 	HAL_UART_Transmit(&huart2, ptr, len, 50);
 	return len;
@@ -283,9 +280,7 @@ int _write(int file, char *ptr, int len){
 
 void Prog_callback(void){
 	// ZMIENNE MIKROFONU
-	//double const filtr[64]={0.00234434917719461,0.00253607247271912,0.00285229122268397,0.00329035375942028,0.00384640000611839,0.00451539722262479,0.00529118751439567,0.00616654664968141,0.00713325361488786,0.00818217022853550,0.00930333003144620,0.0104860355757936,0.0117189631494397,0.0129902738954427,0.0142877302205574,0.0155988163316447,0.0169108616957447,0.0182111661885955,0.0194871256779324,0.0207263567821822,0.0219168195522430,0.0230469368438535,0.0241057091804112,0.0250828239506856,0.0259687578422278,0.0267548714788497,0.0274334953086374,0.0279980058767921,0.0284428917142534,0.0287638081775825,0.0289576206868904,0.0290224359255544,0.0289576206868904,0.0287638081775825,0.0284428917142534,0.0279980058767921,0.0274334953086374,0.0267548714788497,0.0259687578422278,0.0250828239506856,0.0241057091804112,0.0230469368438535,0.0219168195522430,0.0207263567821822,0.0194871256779324,0.0182111661885955,0.0169108616957447,0.0155988163316447,0.0142877302205574,0.0129902738954427,0.0117189631494397,0.0104860355757936,0.00930333003144620,0.00818217022853550,0.00713325361488786,0.00616654664968141,0.00529118751439567,0.00451539722262479,0.00384640000611839,0.00329035375942028,0.00285229122268397,0.00253607247271912,0.00234434917719461,0.00227854094737764};
 	int64_t	max;
-	//double filtrowany[2048];
 
 	// ZMIENNE FLASH
 	// ZAPIS
@@ -336,7 +331,6 @@ void Prog_callback(void){
 			HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN); //zaktualizowanie czasu RTC_Time
 			printf(" Czas rtc: %dh\t%dm\t%ds \r\n", RTC_Time.Hours, RTC_Time.Minutes, RTC_Time.Seconds);
 
-
 			DaneDoZapisu[0] = RTC_Time.Hours;
 			DaneDoZapisu[1] = RTC_Time.Minutes;
 			DaneDoZapisu[2] = RTC_Time.Seconds;
@@ -351,7 +345,6 @@ void Prog_callback(void){
 	HAL_GPIO_WritePin(LD_R_GPIO_Port, LD_R_Pin, GPIO_PIN_RESET);
 
 	// Odczytywanie logow
-
 	uint8_t buffor[6];
 	if (BSP_QSPI_Read(PtrOdczytano, 0x00, RozmiarPaczkiDanych) == QSPI_OK){
 		printf("Data:: %d.%d.%d \r\n", Odczytano[0], Odczytano[1], Odczytano[2]);
@@ -371,76 +364,56 @@ void Prog_callback(void){
 		if (BSP_QSPI_Read(PtrOdczytano, i, RozmiarPaczkiDanych) == QSPI_OK){
 			printf("Log %d: %dh\t%dm\t%ds \r\n", i/3, Odczytano[0], Odczytano[1], Odczytano[2]);
 
-		//zapewnienie formatu hhmmss
-
-			if (Odczytano[0]<10){
-//jednoznakowe godziny
-				if (Odczytano[1]<10){
-	//jednoznakowe minuty
-					if (Odczytano[2]<10){
-		//jednoznakowe sekundy
+			//zapewnienie formatu hhmmss
+			if (Odczytano[0]<10){			//jednoznakowe godziny
+				if (Odczytano[1]<10){		//jednoznakowe minuty
+					if (Odczytano[2]<10){	//jednoznakowe sekundy
 						sprintf(buffor, "0%d0%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
-					}else{
-		//dwuznakowe sekundy
+					}else{					//dwuznakowe sekundy
 						sprintf(buffor, "0%d0%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
-
-				}else{
-	//dwuznakowe minuty
-					if (Odczytano[2]<10){
-		//jednoznakowe sekundy
+				}else{						//dwuznakowe minuty
+					if (Odczytano[2]<10){	//jednoznakowe sekundy
 						sprintf(buffor, "0%d%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
-					}else{
-		//dwuznakowe sekundy
+					}else{					//dwuznakowe sekundy
 						sprintf(buffor, "0%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
-
 				}
-			}else{
-//dwuznakowe godziny
-				if (Odczytano[1]<10){
-	//jednoznakowe minuty
-
-					if (Odczytano[2]<10){
-		//jednoznakowe sekundy
+			}else{		//dwuznakowe godziny
+				if (Odczytano[1]<10){	//jednoznakowe minuty
+					if (Odczytano[2]<10){	//jednoznakowe sekundy
 						sprintf(buffor, "%d0%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
-					}else{
-		//dwuznakowe  sekundy
+					}else{				//dwuznakowe  sekundy
 						sprintf(buffor, "%d0%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
-
-				}else{
-	//dwuznakowe minuty
-
-					if (Odczytano[2]<10){
-		//jednoznakowe sekundy
+				}else{		//dwuznakowe minuty
+					if (Odczytano[2]<10){	//jednoznakowe sekundy
 						sprintf(buffor, "%d%d0%d", Odczytano[0], Odczytano[1], Odczytano[2]);
-					}else{
-		//dwuznakowe sekundy
+					}else{		//dwuznakowe sekundy
 						sprintf(buffor, "%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
 					}
 				}
 			}
-			//alternatywa do wyœwietlania bez zapewnienia formatu hhmmss
+			//alternatywa do wyswietlania bez zapewnienia formatu hhmmss
 			//sprintf(buffor, "%d%d%d", Odczytano[0], Odczytano[1], Odczytano[2]);
-			//koniec wyœwietlania pomiarów
+			//koniec wyswietlania pomiarów
 
 			BSP_LCD_GLASS_DisplayString(buffor);
 			HAL_Delay(1000);
 		} else {
 			printf("Blad odczytu!\r\n");
 			BSP_LCD_GLASS_DisplayString("BLAD");
-		}
+		}	// if odczytu z flash
 	}
-	// DEINIT
 }
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
-if (htim==&htim6 && flagaprobek==1){
 
-	//timval=timval+1;
-	HAL_GPIO_TogglePin(LD_G_GPIO_Port,LD_G_Pin);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
+	if (htim==&htim6 && flagaprobek==1){
+		//timval=timval+1;
+		HAL_GPIO_TogglePin(LD_G_GPIO_Port,LD_G_Pin);
 	}
 }
+
 void Okres_callback(void){
 	flagaprobek=1;
 	printf("Rozpoczynam okresowe zbieranie probek\r\n");
@@ -469,8 +442,7 @@ void Okres_callback(void){
 		HAL_RTC_GetTime(&hrtc, &RTC_Time, RTC_FORMAT_BIN); //zaktualizowanie czasu RTC_Time
 		HAL_Delay(100);
 
-			timval=(((RTC_Time.Hours)*60 + RTC_Time.Minutes *60)+ RTC_Time.Seconds);
-
+		timval=(((RTC_Time.Hours)*60 + RTC_Time.Minutes *60)+ RTC_Time.Seconds);
 
 		if (OkresProbkowania<=timval-curtime){
 		//if (OkresProbkowania<=timval) {
@@ -481,26 +453,23 @@ void Okres_callback(void){
 			for (int var = 0; var < licznik; ++var) {
 				AVERAGE+=statystyka[var];
 			}
-			AVERAGE/=licznik;//œrednia z pomiarów w danym okresie
+			AVERAGE /= licznik;//srednia z pomiarow w danym okresie
 
-			//kod zapisuj¹cy do pamiêci
+			//kod zapisujacy do pamieci
 			srednia = (uint32_t) AVERAGE;
 			// audio mambo jumbo
 			DaneDoZapisu = srednia;
 			printf(" Zapisuje wartosc : %d \r\n", DaneDoZapisu);
 			if (BSP_QSPI_Write(PtrDaneZapis, AdresKomorki, RozmiarWartosciSredniej) != QSPI_OK){
-			printf("Blad zapisu!\r\n");
+				printf("Blad zapisu!\r\n");
 			}
 			AdresKomorki += RozmiarWartosciSredniej;
 			licznik=0;
-			HAL_GPIO_TogglePin(LD_R_GPIO_Port, LD_R_Pin);
-
 			//znacznik
 		}else{
 			if (timval>=(lasttime+okres_probki)){
-				lasttime=timval;//zapisanie kiedy odby³ siê ostatni pomiar
-				//kod pridukuj¹cy pomiary
-				HAL_GPIO_TogglePin(LD_R_GPIO_Port,LD_R_Pin);
+				lasttime=timval;//zapisanie kiedy odbyl sie ostatni pomiar
+				//kod pridukujacy pomiary
 
 				// zbieranie pomiarow i filtracja
 				for (int i3 = 0; i3 < 2048; i3++){
@@ -547,7 +516,6 @@ void Okres_callback(void){
 			BSP_LCD_GLASS_DisplayString("BLAD");
 		}
 	}
-	// DEINIT
 	flagaprobek=0;
 	printf("Koncze zbieranie probek\r\n");
 }
@@ -579,6 +547,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	printf("Error Handler\r\n");
+	BSP_LCD_GLASS_DisplayString("BLAD");
   /* USER CODE END Error_Handler_Debug */
 }
 
