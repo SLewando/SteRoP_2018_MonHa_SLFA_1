@@ -1,0 +1,16 @@
+main.c:860:13:WriteChar.isra.3	16	static
+main.c:237:6:BSP_LCD_GLASS_DeInit	24	static
+main.c:266:6:BSP_LCD_GLASS_BlinkConfig	4	static
+main.c:285:6:BSP_LCD_GLASS_Contrast	0	static
+main.c:300:6:BSP_LCD_GLASS_DisplayBar	24	static
+main.c:354:6:BSP_LCD_GLASS_ClearBar	24	static
+main.c:409:6:BSP_LCD_GLASS_BarLevelConfig	8	static
+main.c:484:6:BSP_LCD_GLASS_DisplayChar	8	static
+main.c:497:6:BSP_LCD_GLASS_DisplayString	16	static
+main.c:523:6:BSP_LCD_GLASS_DisplayStrDeci	16	static
+main.c:560:6:BSP_LCD_GLASS_Clear	0	static
+main.c:206:6:BSP_LCD_GLASS_Init	272	static
+main.c:575:6:BSP_LCD_GLASS_ScrollSentence	40	static
+main.c:1156:6:SystemClock_Config	248	static
+main.c:1074:5:main	80	static
+main.c:1517:6:Error_Handler	0	static

@@ -1,5 +1,0 @@
-dfsdm.c:32:6:MX_DFSDM1_Init	8	static
-dfsdm.c:83:6:HAL_DFSDM_FilterMspInit	48	static
-dfsdm.c:141:6:HAL_DFSDM_ChannelMspInit	40	static
-dfsdm.c:178:6:HAL_DFSDM_FilterMspDeInit	8	static
-dfsdm.c:206:6:HAL_DFSDM_ChannelMspDeInit	8	static
